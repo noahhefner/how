@@ -25,7 +25,7 @@ class GeminiClient(LLMProvider):
             sys.exit("Gemini client not authenticated.")
 
         interaction = self.client.interactions.create(
-            model="gemini-3.7-flash",
+            model="gemini-3.5-flash-lite",
             input=prompt,
             response_format={
                 "type": "text",
