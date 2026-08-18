@@ -1,0 +1,30 @@
+[project]
+name = "how"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Noah Hefner", email = "nhefner127+github@protonmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "google-genai>=2.18.1",
+    "keyring>=25.7.0",
+    "platformdirs>=4.11.3",
+    "pydantic>=2.13.4",
+    "questionary>=2.1.1",
+    "rich>=15.0.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[project.scripts]
+how = "how.cli:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.3",
+    "ty>=0.0.72",
+]
