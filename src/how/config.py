@@ -1,26 +1,81 @@
 import sys
 
-import questionary
 from platformdirs import PlatformDirs
 from pydantic import ValidationError
 
-from how.models.config import Config
+from how.models.config_file import ConfigFile, ProviderConfig
 from how.providers.base import LLMProvider
-from how.providers.discovery import discover_providers
 
 
-class ConfigProvider:
-    def __init__(self, config_filename: str = "config.json"):
+class ConfigManager:
+    def __init__(
+        self,
+        provider_index: dict[str, type[LLMProvider]],
+        config_filename: str = "config.json",
+    ):
 
         self.config_filename = config_filename
-        self.config: Config | None = None
+        self.config: ConfigFile | None = None
         self.platform_dirs = PlatformDirs("how", "NoahHefner")
-        self.providers_by_name = {provider.provider_name: provider for provider in discover_providers()}
+        self.provider_index = provider_index
 
-    def load(self) -> Config | None:
+    def write_provider(
+        self,
+        provider_name: str,
+        model: str,
+        default: bool = False,
+    ) -> None:
+
+        provider_config = ProviderConfig(
+            provider_name=provider_name,
+            default_model=model,
+        )
+
+        config_dir = self.platform_dirs.user_config_path
+        config_file = config_dir / self.config_filename
+
+        if config_file.exists():
+            try:
+                self.config = ConfigFile.model_validate_json(config_file.read_text())
+            except ValidationError:
+                print("Exception while reading config file.", file=sys.stderr)
+                sys.exit(1)
+
+            if self.config is not None:
+                if self.config.providers is not None:
+                    for index, p in enumerate(self.config.providers):
+                        if p.provider_name == provider_name:
+                            self.config.providers[index] = provider_config
+                            config_file.write_text(
+                                self.config.model_dump_json(indent=2)
+                            )
+                            break
+                else:
+                    self.config = ConfigFile(
+                        default_provider=provider_name, providers=[provider_config]
+                    )
+                    config_file.write_text(self.config.model_dump_json(indent=2))
+
+        else:
+            self.config = ConfigFile(
+                default_provider=provider_name, providers=[provider_config]
+            )
+            config_file.write_text(self.config.model_dump_json(indent=2))
+
+    def load(self, force: bool = False) -> ConfigFile | None:
+        """Fetches configuration from config file.
+
+        If the configuration file has already been loaded, return the existing configuration. Override this
+        behaviour using the force argument.
+
+        If no config file is found, return None.
+
+        If the config file exits, load the configuration data, save it to this ConfigManager instance, and
+        return the resulting Config object. Raise an error if the data shape of the config file is malformed.
+        """
 
         # Config already loaded
-        if self.config is not None:
+        if self.config is not None and force is False:
             return self.config
 
         config_dir = self.platform_dirs.user_config_path
@@ -32,19 +87,15 @@ class ConfigProvider:
 
         # Config file exists, load and return
         try:
-            self.config = Config.model_validate_json(config_file.read_text())
+            self.config = ConfigFile.model_validate_json(config_file.read_text())
             return self.config
         except ValidationError as e:
-            sys.exit(f"Invalid configuration: {e}")
+            # TODO: Print with debug only
+            print(f"Invalid configuration file found: {e}", file=sys.stderr)
+            raise
 
-    def get_provider_class(self) -> type[LLMProvider]:
-
-        if not self.config:
-            sys.exit("Config file not loaded.")
-
-        return self.providers_by_name[self.config.provider_name]
-
-    def setup(self) -> None:
+    def initialize(self) -> ConfigFile:
+        """Create a new config file, deleting the existing file, if one exists."""
 
         config_dir = self.platform_dirs.user_config_path
         config_dir.mkdir(parents=True, exist_ok=True)
@@ -54,16 +105,8 @@ class ConfigProvider:
         if config_file.exists():
             config_file.unlink()
 
-        # Prompt user to select an LLM provider
-        selected_name = questionary.select(
-            "Select LLM provider:", choices=list(self.providers_by_name)
-        ).ask()
-
         # Write new config file
-        self.config = Config(provider_name=selected_name)
+        self.config = ConfigFile()
         config_file.write_text(self.config.model_dump_json(indent=2))
 
-        # Authenticate with selected LLM provider
-        provider_class = self.providers_by_name[self.config.provider_name]
-        provider = provider_class()
-        provider.authenticate(force=True)
+        return self.config

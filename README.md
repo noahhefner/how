@@ -84,14 +84,13 @@ Drop a new Python file in `src/how/providers/` with a class that subclasses `LLM
 ```python
 from how.providers.base import LLMProvider
 
+
 class MyProvider(LLMProvider):
     provider_name = "MyProvider"
 
-    def authenticate(self) -> None:
-        ...
+    def authenticate(self) -> None: ...
 
-    def generate_commands(self, prompt: str) -> ...:
-        ...
+    def generate_commands(self, prompt: str) -> ...: ...
 ```
 
 The provider will be automatically discovered on the next run.

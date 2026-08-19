@@ -16,16 +16,22 @@ class GeminiClient(LLMProvider):
 
         self.client = None
 
+    def _check_client(self):
+
+        if self.client is None:
+            print("Gemini client not authenticated.", file=sys.stderr)
+            sys.exit(1)
+
     def generate_commands(
         self,
         prompt: str,
+        model: str,
     ) -> CommandResponse:
 
-        if self.client is None:
-            sys.exit("Gemini client not authenticated.")
+        self._check_client()
 
         interaction = self.client.interactions.create(
-            model="gemini-3.5-flash-lite",
+            model=model,
             input=prompt,
             response_format={
                 "type": "text",
@@ -41,7 +47,6 @@ class GeminiClient(LLMProvider):
         api_key = keyring.get_password("how", "Gemini")
 
         if force or api_key is None:
-
             console = Console()
             console.print("[bold cyan]Gemini configuration[/bold cyan]")
 
@@ -49,13 +54,14 @@ class GeminiClient(LLMProvider):
 
             if not api_key:
                 console.print("[red]API key cannot be empty.[/red]")
-                raise SystemExit(1)
+                sys.exit(1)
 
-            keyring.set_password(
-                "how",
-                "Gemini",
-                api_key
-            )
+            keyring.set_password("how", "Gemini", api_key)
 
         self.client = genai.Client(api_key=api_key)
 
+    def get_models(self) -> list[str]:
+
+        self._check_client()
+
+        return [m.name for m in self.client.models.list()]

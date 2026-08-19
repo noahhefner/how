@@ -15,8 +15,11 @@ class LLMProvider(ABC):
     def generate_commands(
         self,
         prompt: str,
+        model: str,
     ) -> CommandResponse: ...
-
 
     @abstractmethod
     def authenticate(self) -> None: ...
+
+    @abstractmethod
+    def get_models(self) -> list[str]: ...
