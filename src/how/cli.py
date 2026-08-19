@@ -2,6 +2,7 @@ import argparse
 import os
 import platform
 
+import sys
 import questionary
 from rich.console import Console
 
@@ -47,6 +48,12 @@ def main():
         action="store_true",
         help="List supported LLM providers",
     )
+
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Configure an LLM provider"
+    )
     
     args = parser.parse_args()
     
@@ -56,14 +63,20 @@ def main():
             print(f"  - {provider.provider_name}")
         return
 
-    prompt = " ".join(args.prompt)
-
-    # Check configuration
     configurator = ConfigProvider()
-    _ = configurator.load()
+
+    if args.setup:
+        configurator.setup()
+        return
+
+    config = configurator.load()
+    if not config:
+        sys.exit("Config file not found. Run how --setup to configure an LLM provider.")
+
     provider_class = configurator.get_provider_class()
     provider = provider_class()
-    provider.authenticate()
+
+    prompt = " ".join(args.prompt)
 
     operating_system = platform.system()
     shell = os.environ.get("SHELL", "unknown")

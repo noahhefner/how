@@ -17,7 +17,7 @@ class ConfigProvider:
         self.platform_dirs = PlatformDirs("how", "NoahHefner")
         self.providers_by_name = {provider.provider_name: provider for provider in discover_providers()}
 
-    def load(self) -> Config:
+    def load(self) -> Config | None:
 
         # Config already loaded
         if self.config is not None:
@@ -26,11 +26,9 @@ class ConfigProvider:
         config_dir = self.platform_dirs.user_config_path
         config_file = config_dir / self.config_filename
 
-        # No config found, run setup
+        # No config found
         if not config_file.is_file():
-            self.setup()
-            assert self.config is not None
-            return self.config
+            return None
 
         # Config file exists, load and return
         try:
@@ -64,3 +62,8 @@ class ConfigProvider:
         # Write new config file
         self.config = Config(provider_name=selected_name)
         config_file.write_text(self.config.model_dump_json(indent=2))
+
+        # Authenticate with selected LLM provider
+        provider_class = self.providers_by_name[self.config.provider_name]
+        provider = provider_class()
+        provider.authenticate(force=True)
