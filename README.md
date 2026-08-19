@@ -8,8 +8,9 @@ A terminal command assistant that uses LLMs to generate shell commands from natu
 - Interactive selection menu to choose from multiple command suggestions
 - OS and shell aware — generates commands specific to your environment
 - Pluggable LLM provider system — easily add new providers
-- API keys stored securely in your OS keyring
+- Authentication credentials stored securely in your OS keyring
 - Structured output via Pydantic for reliable command parsing
+- Selectable models for configured LLM providers
 
 ## Installation
 
@@ -43,33 +44,32 @@ This will walk you through selecting a provider and authenticating with your API
 ### Ask a question
 
 ```bash
-how compress a folder
-how find all files larger than 100MB
-how list all running docker containers
-how rename multiple files at once
+how "compress a folder"
+how "find all files larger than 100MB"
+how "list all running docker containers"
+how "rename multiple files at once"
 ```
 
-### List available providers
+### List Supported LLM Providers
 
 ```bash
-how --list-providers
+how --list-supported-providers
 ```
 
 ### Run without installing
 
 ```bash
-uv run how how do I find duplicate files
+uv run how "find largest file in the /opt directory"
 ```
 
 ## Roadmap
 
-1. **Select different models from each provider** — Allow users to choose specific models (e.g., gemini-2.0-flash, gemini-2.5-pro) rather than being locked to a single default model per provider.
-2. **Logs** — Add configurable logging for debugging provider interactions, request/response payloads, and errors.
-3. **Tests** — Add a comprehensive test suite covering CLI behavior, provider integration, config management, and command parsing.
-4. **Descriptions for each command** — Display a short explanation alongside each suggested command so users understand what it does before selecting.
-5. **Install script** — Provide a standalone install script (`install.sh`) that sets up the tool without requiring the user to manually manage Python environments.
-6. **Shell wrapper** — A shell function or script that, after the user selects a command and `how` exits, places that command directly on the command line (ready to edit or press Enter to execute) rather than just printing it to stdout.
-7. **More LLM Providers** - Add support for more LLM providers.
+1. **Logs** — Add configurable logging for debugging provider interactions, request/response payloads, and errors.
+2. **Tests** — Add a comprehensive test suite covering CLI behavior, provider integration, config management, and command parsing.
+3. **Descriptions for each command** — Display a short explanation alongside each suggested command so users understand what it does before selecting.
+4. **Install script** — Provide a standalone install script (`install.sh`) that sets up the tool without requiring the user to manually manage Python environments.
+5. **Shell wrapper** — A shell function or script that, after the user selects a command and `how` exits, places that command directly on the command line (ready to edit or press Enter to execute) rather than just printing it to stdout.
+6. **More LLM Providers** - Add support for more LLM providers.
 
 ## Supported Providers
 
@@ -77,7 +77,7 @@ uv run how how do I find duplicate files
 |----------|--------|
 | Google Gemini | Supported |
 
-### Adding a new provider
+### Adding a New LLM Provider
 
 Drop a new Python file in `src/how/providers/` with a class that subclasses `LLMProvider`:
 
@@ -86,33 +86,19 @@ from how.providers.base import LLMProvider
 
 
 class MyProvider(LLMProvider):
-    provider_name = "MyProvider"
+
+    def generate_commands(
+        self,
+        prompt: str,
+        model: str,
+    ) -> CommandResponse: ...
 
     def authenticate(self) -> None: ...
 
-    def generate_commands(self, prompt: str) -> ...: ...
+    def get_models(self) -> list[str]: ...
 ```
 
 The provider will be automatically discovered on the next run.
-
-## Project Structure
-
-```
-how/
-├── src/how/
-│   ├── __main__.py          # Entry point (python -m how)
-│   ├── cli.py               # CLI argument parsing, prompt building, selection UI
-│   ├── config.py            # Config loading, saving, and setup wizard
-│   ├── models/
-│   │   ├── command.py       # CommandOption and CommandResponse Pydantic models
-│   │   └── config.py        # Config Pydantic model
-│   └── providers/
-│       ├── base.py          # Abstract LLMProvider base class
-│       ├── discovery.py     # Auto-discovers provider plugins
-│       └── gemini.py        # Google Gemini provider
-├── pyproject.toml
-└── uv.lock
-```
 
 ## License
 
