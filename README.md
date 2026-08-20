@@ -86,7 +86,6 @@ from how.providers.base import LLMProvider
 
 
 class MyProvider(LLMProvider):
-
     def generate_commands(
         self,
         prompt: str,

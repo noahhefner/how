@@ -41,7 +41,7 @@ $ free -h
 Setting up an LLM provider:
 
 ```sh
-$ how setup
+$ how --setup
 
 Select LLM Provider:
  * Gemini

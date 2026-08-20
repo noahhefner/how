@@ -1,9 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class CommandOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     command: str
 
 
 class CommandResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     options: list[CommandOption]

@@ -10,30 +10,22 @@ from how.providers.base import LLMProvider
 
 
 class GeminiProvider(LLMProvider):
-    def __init__(self):
-
-        self.client = None
-
-    def _check_client(self):
-
-        if self.client is None:
-            print("Gemini client not authenticated.", file=sys.stderr)
-            sys.exit(1)
-
+    @staticmethod
     def generate_commands(
-        self,
         prompt: str,
         model: str,
     ) -> CommandResponse:
         """Send request to Gemini.
 
         Response format is specified in the request.
+
+        Assumptions:
+            - User is authenticated.
         """
 
-        self._check_client()
-        assert self.client is not None
+        client = GeminiProvider._get_client()
 
-        interaction = self.client.interactions.create(
+        interaction = client.interactions.create(
             model=model,
             input=prompt,
             response_format={
@@ -45,7 +37,8 @@ class GeminiProvider(LLMProvider):
 
         return CommandResponse.model_validate_json(interaction.output_text)
 
-    def authenticate(self, force: bool = False) -> None:
+    @staticmethod
+    def authenticate(force: bool = False) -> None:
         """Authenticate with Google Gemini via API key.
 
         API key is securely stored via keyring.
@@ -57,7 +50,6 @@ class GeminiProvider(LLMProvider):
 
         if force or api_key is None:
             console = Console()
-            console.print("[bold cyan]Gemini configuration[/bold cyan]")
 
             api_key = getpass("Gemini API key: ")
 
@@ -67,15 +59,39 @@ class GeminiProvider(LLMProvider):
 
             keyring.set_password("how", "Gemini", api_key)
 
-        self.client = genai.Client(api_key=api_key)
+    @staticmethod
+    def unauthenticate() -> None:
+        """Clear local credentials."""
 
-    def get_models(self) -> list[str]:
+        api_key = keyring.get_password("how", "Gemini")
+
+        if api_key is None:
+            print("No API key found for Gemini.")
+            return
+
+        keyring.delete_password("how", "Gemini")
+
+    @staticmethod
+    def get_models() -> list[str]:
         """Get all Gemini models via the API.
 
         Requires authentication to list models.
         """
 
-        self._check_client()
-        assert self.client is not None
+        client = GeminiProvider._get_client()
+        return [m.name for m in client.models.list()]
 
-        return [m.name for m in self.client.models.list()]
+    @staticmethod
+    def _get_client() -> genai.Client:
+        """Create and return a Gemini client.
+
+        Assumptions:
+            - User is authenticated.
+        """
+
+        api_key = keyring.get_password("how", "Gemini")
+        if api_key is None:
+            print("Gemini not authenticated.", file=sys.stderr)
+            sys.exit(1)
+
+        return genai.Client(api_key=api_key)

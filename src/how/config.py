@@ -36,7 +36,7 @@ class ConfigManager:
 
         self._load_config_file(config_file)
 
-    def write_provider(
+    def add_provider(
         self,
         provider_name: str,
         model: str,
@@ -65,10 +65,79 @@ class ConfigManager:
         if default or self.config.default_provider is None:
             self.config.default_provider = provider_name
 
-        # Update config file on disk
+        self._write_config()
+
+        print(f"Added provider: {provider_name}")
+
+    def set_default_provider(
+        self,
+        provider_name: str,
+    ) -> None:
+        """Set a provider as the default.
+
+        Assumptions:
+            - Configuration file exists.
+            - Configuration file data has been read into this class via initialize function.
+        """
+
+        assert self.config is not None
+        assert self.config.providers[provider_name] is not None
+
+        # Update internal state
+        self.config.default_provider = provider_name
+
+        # Write to disk
+        self._write_config()
+
+        print(f"Set {provider_name} as default provider.")
+
+    def remove_provider(
+        self,
+        provider_name: str,
+    ) -> None:
+        """Remove an LLM provider from the config file.
+
+        Assumptions:
+            - Configuration file exists.
+            - Configuration file data has been read into this class via initialize function.
+        """
+
+        assert self.config is not None
+        assert self.config.providers is not None
+        assert self.config.providers[provider_name] is not None
+
+        # Remove provider from in-memory config
+        del self.config.providers[provider_name]
+
+        # Removal confirmation message
+        print(f"Removed provider: {provider_name}")
+
+        # If another provider is configured as the default, we do not need to set
+        # a new default. Write out new config to disk and return.
+        if self.config.default_provider != provider_name:
+            self._write_config()
+            return
+
+        # Set a new default provider if another one is available. Otherwise, clear
+        # the default and send a warning message.
+        if len(self.config.providers) > 0:
+            new_default = next(iter(self.config.providers))
+            self.config.default_provider = new_default
+            print(f"New default LLM provider: {new_default}")
+        else:
+            self.config.default_provider = None
+            print("No remaining LLM providers configured.")
+
+        # Write config to disk
+        self._write_config()
+
+    def _write_config(self):
+        """Write in-memory config to config file on disk."""
+
         config_dir = self.platform_dirs.user_config_path
         config_file = config_dir / self.config_filename
 
+        assert self.config is not None
         assert config_file.exists()
         assert config_file.is_file()
 
