@@ -1,8 +1,8 @@
-# how
+# how-tui
 
 ## Objective
 
-`how` is a tool for generating command line commands with natural language.
+`how-tui` is a tool for generating command line commands with natural language.
 
 ## Toolchain
 

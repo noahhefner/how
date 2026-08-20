@@ -1,4 +1,4 @@
-# how
+# how-tui
 
 A terminal command assistant that uses LLMs to generate shell commands from natural language questions. Ask it how to do something and it will suggest commands for your specific OS and shell.
 
@@ -16,8 +16,8 @@ A terminal command assistant that uses LLMs to generate shell commands from natu
 
 ```bash
 # Clone the repository
-git clone https://github.com/nhefner/how.git
-cd how
+git clone https://github.com/nhefner/how-tui.git
+cd how-tui
 
 # Install with uv (recommended)
 uv sync
@@ -79,10 +79,10 @@ uv run how "find largest file in the /opt directory"
 
 ### Adding a New LLM Provider
 
-Drop a new Python file in `src/how/providers/` with a class that subclasses `LLMProvider`:
+Drop a new Python file in `src/how_tui/providers/` with a class that subclasses `LLMProvider`:
 
 ```python
-from how.providers.base import LLMProvider
+from how_tui.providers.base import LLMProvider
 
 
 class MyProvider(LLMProvider):

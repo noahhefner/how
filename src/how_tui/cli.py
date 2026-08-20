@@ -6,8 +6,8 @@ import sys
 import questionary
 from rich.console import Console
 
-from how.config import ConfigManager
-from how.providers import PROVIDERS
+from how_tui.config import ConfigManager
+from how_tui.providers import PROVIDERS
 
 PROMPT_TEMPLATE = """
 You are a terminal command assistant.
@@ -82,10 +82,8 @@ def remove_provider(configurator: ConfigManager):
 def set_default_provider(configurator: ConfigManager):
 
     assert configurator.config is not None
-    assert configurator.config.providers is not None
 
-    provider_names = list(configurator.config.providers.keys())
-    if len(provider_names) == 0:
+    if configurator.config.providers is None:
         print("No providers configured. Run 'how --setup' to configure a provider.")
         return
 

@@ -3,8 +3,8 @@ import sys
 from platformdirs import PlatformDirs
 from pydantic import ValidationError
 
-from how.models.config_file import ConfigFile, ProviderConfig
-from how.providers.base import LLMProvider
+from how_tui.models.config_file import ConfigFile, ProviderConfig
+from how_tui.providers.base import LLMProvider
 
 
 class ConfigManager:
@@ -16,7 +16,7 @@ class ConfigManager:
 
         self.config_filename = config_filename
         self.config: ConfigFile | None = None
-        self.platform_dirs = PlatformDirs("how", "NoahHefner")
+        self.platform_dirs = PlatformDirs("how-tui", "NoahHefner")
         self.provider_index = provider_index
 
     def initialize(self):

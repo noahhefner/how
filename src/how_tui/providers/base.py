@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from how.models.command import CommandResponse
+from how_tui.models.command import CommandResponse
 
 
 class LLMProvider(ABC):

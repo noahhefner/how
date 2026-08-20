@@ -5,8 +5,8 @@ import keyring
 from google import genai
 from rich.console import Console
 
-from how.models.command import CommandResponse
-from how.providers.base import LLMProvider
+from how_tui.models.command import CommandResponse
+from how_tui.providers.base import LLMProvider
 
 
 class GeminiProvider(LLMProvider):
@@ -46,7 +46,7 @@ class GeminiProvider(LLMProvider):
         Use the force argument to overwrite existing API key.
         """
 
-        api_key = keyring.get_password("how", "Gemini")
+        api_key = keyring.get_password("how-tui", "Gemini")
 
         if force or api_key is None:
             console = Console()
@@ -57,19 +57,19 @@ class GeminiProvider(LLMProvider):
                 console.print("[red]API key cannot be empty.[/red]")
                 sys.exit(1)
 
-            keyring.set_password("how", "Gemini", api_key)
+            keyring.set_password("how-tui", "Gemini", api_key)
 
     @staticmethod
     def unauthenticate() -> None:
         """Clear local credentials."""
 
-        api_key = keyring.get_password("how", "Gemini")
+        api_key = keyring.get_password("how-tui", "Gemini")
 
         if api_key is None:
             print("No API key found for Gemini.")
             return
 
-        keyring.delete_password("how", "Gemini")
+        keyring.delete_password("how-tui", "Gemini")
 
     @staticmethod
     def get_models() -> list[str]:
@@ -89,7 +89,7 @@ class GeminiProvider(LLMProvider):
             - User is authenticated.
         """
 
-        api_key = keyring.get_password("how", "Gemini")
+        api_key = keyring.get_password("how-tui", "Gemini")
         if api_key is None:
             print("Gemini not authenticated.", file=sys.stderr)
             sys.exit(1)

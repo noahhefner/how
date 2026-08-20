@@ -7,8 +7,8 @@ import keyring
 from groq import Groq
 from rich.console import Console
 
-from how.models.command import CommandResponse
-from how.providers.base import LLMProvider
+from how_tui.models.command import CommandResponse
+from how_tui.providers.base import LLMProvider
 
 
 class GroqProvider(LLMProvider):
@@ -45,7 +45,7 @@ class GroqProvider(LLMProvider):
     @staticmethod
     def authenticate(force: bool = False) -> None:
 
-        api_key = keyring.get_password("how", "Groq")
+        api_key = keyring.get_password("how-tui", "Groq")
 
         if force or api_key is None:
             console = Console()
@@ -56,19 +56,19 @@ class GroqProvider(LLMProvider):
                 console.print("[red]API key cannot be empty.[/red]")
                 sys.exit(1)
 
-            keyring.set_password("how", "Groq", api_key)
+            keyring.set_password("how-tui", "Groq", api_key)
 
     @staticmethod
     def unauthenticate() -> None:
         """Clear local credentials."""
 
-        api_key = keyring.get_password("how", "Groq")
+        api_key = keyring.get_password("how-tui", "Groq")
 
         if api_key is None:
             print("No API key found for Groq.")
             return
 
-        keyring.delete_password("how", "Groq")
+        keyring.delete_password("how-tui", "Groq")
 
     @staticmethod
     def get_models() -> list[str]:
@@ -90,7 +90,7 @@ class GroqProvider(LLMProvider):
             - User is authenticated.
         """
 
-        api_key = keyring.get_password("how", "Groq")
+        api_key = keyring.get_password("how-tui", "Groq")
         if api_key is None:
             print("Groq not authenticated.", file=sys.stderr)
             sys.exit(1)

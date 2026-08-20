@@ -1,6 +1,6 @@
 [project]
-name = "how"
-version = "0.1.0"
+name = "how-tui"
+version = "0.0.1"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -22,7 +22,7 @@ requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
 
 [project.scripts]
-how = "how.cli:main"
+how = "how_tui.cli:main"
 
 [dependency-groups]
 dev = [
