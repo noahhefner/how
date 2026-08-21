@@ -8,4 +8,4 @@ class CommandOption(BaseModel):
 
 class CommandResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    options: list[CommandOption]
+    commands: list[CommandOption]

@@ -3,6 +3,7 @@ from getpass import getpass
 
 import keyring
 from google import genai
+from google.genai.pagers import Pager
 from rich.console import Console
 
 from how_tui.models.command import CommandResponse
@@ -35,7 +36,7 @@ class GeminiProvider(LLMProvider):
             },
         )
 
-        return CommandResponse.model_validate_json(interaction.output_text)
+        return CommandResponse.model_validate_json(interaction.output_text)  # ty: ignore[invalid-argument-type, unresolved-attribute]
 
     @staticmethod
     def authenticate(force: bool = False) -> None:
@@ -79,7 +80,8 @@ class GeminiProvider(LLMProvider):
         """
 
         client = GeminiProvider._get_client()
-        return [m.name for m in client.models.list()]
+        models: Pager = client.models.list()
+        return [m.name for m in list(models)]
 
     @staticmethod
     def _get_client() -> genai.Client:

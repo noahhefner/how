@@ -2,9 +2,12 @@ import json
 import sys
 from getpass import getpass
 
-import groq.types
 import keyring
 from groq import Groq
+from groq.types import ModelListResponse
+from groq.types.chat.completion_create_params import (
+    ResponseFormatResponseFormatJsonSchema,
+)
 from rich.console import Console
 
 from how_tui.models.command import CommandResponse
@@ -20,7 +23,7 @@ class GroqProvider(LLMProvider):
 
         client = GroqProvider._get_client()
 
-        response_format = {
+        response_format: ResponseFormatResponseFormatJsonSchema = {
             "type": "json_schema",
             "json_schema": {
                 "name": "terminal_commands",
@@ -78,7 +81,7 @@ class GroqProvider(LLMProvider):
         """
 
         client = GroqProvider._get_client()
-        models: groq.types.ModelListResponse = client.models.list()
+        models: ModelListResponse = client.models.list()
 
         return [m.id for m in models.data]
 

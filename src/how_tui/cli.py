@@ -87,6 +87,8 @@ def set_default_provider(configurator: ConfigManager):
         print("No providers configured. Run 'how --setup' to configure a provider.")
         return
 
+    provider_names = list(configurator.config.providers.keys())
+
     # Prompt user to select a default provider
     selected_name = questionary.select(
         "Select a default LLM provider:", choices=provider_names
@@ -123,6 +125,13 @@ def setup(configurator: ConfigManager):
     configurator.add_provider(selected_name, selected_model)
 
 
+def print_commands(commands: list[str]):
+
+    print("Command suggestions:")
+    for command in commands:
+        print(f"  - {command}")
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -140,7 +149,7 @@ def main():
     )
 
     parser.add_argument(
-        "--setup",
+        "--add-provider",
         action="store_true",
         help="Setup an LLM provider",
     )
@@ -189,8 +198,13 @@ def main():
         sys.exit(0)
 
     # Setup an LLM provider
-    if args.setup:
+    if args.add_provider:
         setup(configurator)
+        sys.exit(0)
+
+    # No prompt
+    if args.prompt is None or args.prompt.strip() == "":
+        parser.print_help()
         sys.exit(0)
 
     # Get provider
@@ -221,16 +235,12 @@ def main():
     try:
         with console.status("[bold green]Working...[/bold green]", spinner="dots"):
             response = provider.generate_commands(prompt_with_context, model)
-    except:
+    except Exception:  # noqa: BLE001
         console.print(
             "[red]An error occurred. Ensure your selected model supports structued output.[/red]"
         )
         sys.exit(1)
 
-    options = [o.command for o in response.options]
+    commands = [c.command for c in response.commands]
 
-    choice = questionary.select(
-        "Select a command:", choices=[*options, "None / Exit"]
-    ).ask()
-
-    print(choice)
+    print_commands(commands)

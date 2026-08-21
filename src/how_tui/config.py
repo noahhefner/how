@@ -81,6 +81,7 @@ class ConfigManager:
         """
 
         assert self.config is not None
+        assert self.config.providers is not None
         assert self.config.providers[provider_name] is not None
 
         # Update internal state
