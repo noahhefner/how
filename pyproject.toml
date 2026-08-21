@@ -1,7 +1,7 @@
 [project]
 name = "how-tui"
-version = "0.0.1"
-description = "Add your description here"
+version = "1.0.0"
+description = "Terminal command assistant"
 readme = "README.md"
 authors = [
     { name = "Noah Hefner", email = "nhefner127+github@protonmail.com" }
