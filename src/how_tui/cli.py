@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import platform
 import sys
@@ -32,8 +33,11 @@ Shell: {shell}
 Return the appropriate commands.
 """
 
+logger = logging.getLogger(__name__)
+
 
 def list_supported_providers(configurator: ConfigManager):
+    """List all LLM providers that are supported by how-tui."""
 
     print("Supported LLM providers:")
     for provider_name in configurator.provider_index:
@@ -41,6 +45,7 @@ def list_supported_providers(configurator: ConfigManager):
 
 
 def list_configured_providers(configurator: ConfigManager):
+    """List all LLM providers that the user has configured."""
 
     assert configurator.config is not None
     assert configurator.config.providers is not None
@@ -55,6 +60,11 @@ def list_configured_providers(configurator: ConfigManager):
 
 
 def remove_provider(configurator: ConfigManager):
+    """Remove an LLM provider.
+
+    Removes the provider from the configuration file and erases locally stored
+    auth credentials.
+    """
 
     assert configurator.config is not None
     assert configurator.config.providers is not None
@@ -80,6 +90,7 @@ def remove_provider(configurator: ConfigManager):
 
 
 def set_default_provider(configurator: ConfigManager):
+    """Set a default LLM provider."""
 
     assert configurator.config is not None
 
@@ -98,7 +109,8 @@ def set_default_provider(configurator: ConfigManager):
     configurator.set_default_provider(selected_name)
 
 
-def setup(configurator: ConfigManager):
+def add_provider(configurator: ConfigManager):
+    """Configure an LLM provider."""
 
     # List of all supported provider names
     provider_names = [
@@ -126,6 +138,7 @@ def setup(configurator: ConfigManager):
 
 
 def print_commands(commands: list[str]):
+    """Display commands reccommended by the AI."""
 
     print("Command suggestions:")
     for command in commands:
@@ -163,7 +176,13 @@ def main():
     parser.add_argument(
         "--set-default-provider",
         action="store_true",
-        help="Remove an LLM provider",
+        help="Set a default LLM provider",
+    )
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug level logging",
     )
 
     parser.add_argument(
@@ -174,6 +193,19 @@ def main():
 
     args = parser.parse_args()
 
+    # Configure log level
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    # Get environment information
+    operating_system = platform.system()
+    shell = os.environ.get("SHELL", "unknown")
+    logger.debug(f"Detected operating system: {operating_system}")
+    logger.debug(f"Detected shell: {shell}")
+
+    # Create config manager
     configurator = ConfigManager(PROVIDERS)
     configurator.initialize()
 
@@ -197,9 +229,9 @@ def main():
         set_default_provider(configurator)
         sys.exit(0)
 
-    # Setup an LLM provider
+    # Add an LLM provider
     if args.add_provider:
-        setup(configurator)
+        add_provider(configurator)
         sys.exit(0)
 
     # No prompt
@@ -219,10 +251,6 @@ def main():
     # Get model from config
     model = configurator.get_default_provider_model()
 
-    # Get environment information
-    operating_system = platform.system()
-    shell = os.environ.get("SHELL", "unknown")
-
     # Construct full prompt
     prompt_with_context = PROMPT_TEMPLATE.format(
         operating_system=operating_system,
@@ -230,17 +258,15 @@ def main():
         prompt=args.prompt,
     )
 
+    # Get commands from the AI
     console = Console()
-
     try:
         with console.status("[bold green]Working...[/bold green]", spinner="dots"):
             response = provider.generate_commands(prompt_with_context, model)
     except Exception:  # noqa: BLE001
-        console.print(
-            "[red]An error occurred. Ensure your selected model supports structued output.[/red]"
-        )
+        console.print("[red]An error occurred while generating commands.[/red]")
         sys.exit(1)
 
+    # Print commands to the console
     commands = [c.command for c in response.commands]
-
     print_commands(commands)

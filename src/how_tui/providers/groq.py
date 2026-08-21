@@ -40,7 +40,7 @@ class GroqProvider(LLMProvider):
 
         result = json.loads(response.choices[0].message.content or "{}")
         if not result:
-            print("An error occurred.")
+            print("Empty result from Groq provider.")
             sys.exit(1)
 
         return CommandResponse.model_validate(result)
@@ -63,7 +63,6 @@ class GroqProvider(LLMProvider):
 
     @staticmethod
     def unauthenticate() -> None:
-        """Clear local credentials."""
 
         api_key = keyring.get_password("how-tui", "Groq")
 
@@ -75,10 +74,6 @@ class GroqProvider(LLMProvider):
 
     @staticmethod
     def get_models() -> list[str]:
-        """Get all Groq models via the API.
-
-        Requires authentication to list models.
-        """
 
         client = GroqProvider._get_client()
         models: ModelListResponse = client.models.list()
@@ -87,11 +82,6 @@ class GroqProvider(LLMProvider):
 
     @staticmethod
     def _get_client() -> Groq:
-        """Create and return a Groq client.
-
-        Assumptions:
-            - User is authenticated.
-        """
 
         api_key = keyring.get_password("how-tui", "Groq")
         if api_key is None:

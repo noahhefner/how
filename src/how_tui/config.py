@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from platformdirs import PlatformDirs
@@ -5,6 +6,8 @@ from pydantic import ValidationError
 
 from how_tui.models.config_file import ConfigFile, ProviderConfig
 from how_tui.providers.base import LLMProvider
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigManager:
@@ -27,6 +30,7 @@ class ConfigManager:
         config_file = config_dir / self.config_filename
 
         if not config_file.exists():
+            logger.debug("Config file does not exist. Creating one now...")
             self._create_config_file(config_file)
             return
 
@@ -195,6 +199,7 @@ class ConfigManager:
 
         try:
             self.config = ConfigFile.model_validate_json(config_file.read_text())
-        except ValidationError:
-            print("Invalid configuration file.", file=sys.stderr)
+        except ValidationError as e:
+            logger.debug(f"Validation error occurred while reading config file: {e}")
+            print("Malformed configuration file.", file=sys.stderr)
             sys.exit(1)

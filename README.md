@@ -66,10 +66,12 @@ how "rename multiple files at once"
 
 ## Roadmap
 
-1. **Logs** — Add configurable logging for debugging provider interactions, request/response payloads, and errors.
-2. **Tests** — Add a comprehensive test suite covering CLI behavior, provider integration, config management, and command parsing.
-3. **Descriptions for each command** — Display a short explanation alongside each suggested command so users understand what it does before selecting.
-4. **More LLM Providers** - Add support for more LLM providers.
+In no particular order:
+
+- **Syntax Highlighting** - Shell-aware syntax highlighting in the displayed commands.
+- **Tests** — Add a comprehensive test suite covering CLI behavior, provider integration, config management, and command parsing.
+- **Descriptions for each command** — Display a short explanation alongside each suggested command so users understand what it does before selecting.
+- **More LLM Providers** - Add support for more LLM providers.
 
 ## Supported Providers
 
@@ -107,7 +109,6 @@ class LLMProvider(ABC):
     @staticmethod
     @abstractmethod
     def get_models() -> list[str]: ...
-
 ```
 
 ## License
