@@ -8,7 +8,7 @@ import questionary
 from rich.console import Console
 
 from how_tui.config import ConfigManager
-from how_tui.providers import PROVIDERS
+from how_tui.providers import PROVIDERS, LLMProvider
 
 PROMPT_TEMPLATE = """
 You are a terminal command assistant.
@@ -50,8 +50,9 @@ def list_configured_providers(configurator: ConfigManager):
     assert configurator.config is not None
     assert configurator.config.providers is not None
 
+    # TODO: Make this some sort of accessor
     if len(configurator.config.providers) == 0:
-        print("No providers configured.")
+        print("No LLM providers configured. Run 'how --setup' to configure one.")
         return
 
     print("Configured LLM providers:")
@@ -138,7 +139,7 @@ def add_provider(configurator: ConfigManager):
 
 
 def print_commands(commands: list[str]):
-    """Display commands reccommended by the AI."""
+    """Display the commands reccommended by the AI."""
 
     print("Command suggestions:")
     for command in commands:
@@ -186,6 +187,16 @@ def main():
     )
 
     parser.add_argument(
+        "--provider",
+        help="Specify which LLM provider to use",
+    )
+
+    parser.add_argument(
+        "--model",
+        help="Specify which model to use",
+    )
+
+    parser.add_argument(
         "prompt",
         nargs="?",
         help="Question for the LLM",
@@ -197,6 +208,7 @@ def main():
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
     else:
+        logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.basicConfig(level=logging.INFO)
 
     # Get environment information
@@ -239,17 +251,39 @@ def main():
         parser.print_help()
         sys.exit(0)
 
-    # Get provider
-    provider = configurator.get_default_provider_class()
-    if provider is None:
-        print("No LLM provider configured. Run 'how --setup' to configure one.")
+    # Check that at least one provider is configured
+    if not configurator.any_providers_configured():
+        print("No LLM providers configured. Run 'how --setup' to configure one.")
         sys.exit(0)
+
+    # Get provider
+    provider: type[LLMProvider] | None = None
+    user_specified_provider = args.provider
+    if user_specified_provider is not None:
+        if not configurator.provider_is_supported(user_specified_provider):
+            print("Provider not supported.")
+            sys.exit(1)
+        if not configurator.provider_is_configured(user_specified_provider):
+            print("Provider not configured.")
+            sys.exit(1)
+        provider = configurator.get_provider_by_name(user_specified_provider)
+    else:
+        provider = configurator.get_default_provider_class()
+    assert provider is not None
+    logger.debug(f"Using provider class: {provider.__name__}")
 
     # Authenticate with the LLM provider
     provider.authenticate()
 
-    # Get model from config
-    model = configurator.get_default_provider_model()
+    # Get model
+    model: str | None = None
+    user_specified_model = args.model
+    if user_specified_model is not None:
+        model = user_specified_model
+    else:
+        model = configurator.get_default_provider_model()
+    assert model is not None
+    logger.debug(f"Using model: {model}")
 
     # Construct full prompt
     prompt_with_context = PROMPT_TEMPLATE.format(
