@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import platform
 import sys
@@ -7,7 +8,7 @@ import questionary
 from rich.console import Console
 
 from how_tui.config import ConfigManager
-from how_tui.providers import PROVIDERS
+from how_tui.providers import PROVIDERS, LLMProvider
 
 PROMPT_TEMPLATE = """
 You are a terminal command assistant.
@@ -32,8 +33,11 @@ Shell: {shell}
 Return the appropriate commands.
 """
 
+logger = logging.getLogger(__name__)
+
 
 def list_supported_providers(configurator: ConfigManager):
+    """List all LLM providers that are supported by how-tui."""
 
     print("Supported LLM providers:")
     for provider_name in configurator.provider_index:
@@ -41,12 +45,14 @@ def list_supported_providers(configurator: ConfigManager):
 
 
 def list_configured_providers(configurator: ConfigManager):
+    """List all LLM providers that the user has configured."""
 
     assert configurator.config is not None
     assert configurator.config.providers is not None
 
+    # TODO: Make this some sort of accessor
     if len(configurator.config.providers) == 0:
-        print("No providers configured.")
+        print("No LLM providers configured. Run 'how --setup' to configure one.")
         return
 
     print("Configured LLM providers:")
@@ -55,6 +61,11 @@ def list_configured_providers(configurator: ConfigManager):
 
 
 def remove_provider(configurator: ConfigManager):
+    """Remove an LLM provider.
+
+    Removes the provider from the configuration file and erases locally stored
+    auth credentials.
+    """
 
     assert configurator.config is not None
     assert configurator.config.providers is not None
@@ -80,6 +91,7 @@ def remove_provider(configurator: ConfigManager):
 
 
 def set_default_provider(configurator: ConfigManager):
+    """Set a default LLM provider."""
 
     assert configurator.config is not None
 
@@ -98,7 +110,8 @@ def set_default_provider(configurator: ConfigManager):
     configurator.set_default_provider(selected_name)
 
 
-def setup(configurator: ConfigManager):
+def add_provider(configurator: ConfigManager):
+    """Configure an LLM provider."""
 
     # List of all supported provider names
     provider_names = [
@@ -126,6 +139,7 @@ def setup(configurator: ConfigManager):
 
 
 def print_commands(commands: list[str]):
+    """Display the commands reccommended by the AI."""
 
     print("Command suggestions:")
     for command in commands:
@@ -163,7 +177,23 @@ def main():
     parser.add_argument(
         "--set-default-provider",
         action="store_true",
-        help="Remove an LLM provider",
+        help="Set a default LLM provider",
+    )
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug level logging",
+    )
+
+    parser.add_argument(
+        "--provider",
+        help="Specify which LLM provider to use",
+    )
+
+    parser.add_argument(
+        "--model",
+        help="Specify which model to use",
     )
 
     parser.add_argument(
@@ -174,6 +204,20 @@ def main():
 
     args = parser.parse_args()
 
+    # Configure log level
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.basicConfig(level=logging.INFO)
+
+    # Get environment information
+    operating_system = platform.system()
+    shell = os.environ.get("SHELL", "unknown")
+    logger.debug(f"Detected operating system: {operating_system}")
+    logger.debug(f"Detected shell: {shell}")
+
+    # Create config manager
     configurator = ConfigManager(PROVIDERS)
     configurator.initialize()
 
@@ -197,9 +241,9 @@ def main():
         set_default_provider(configurator)
         sys.exit(0)
 
-    # Setup an LLM provider
+    # Add an LLM provider
     if args.add_provider:
-        setup(configurator)
+        add_provider(configurator)
         sys.exit(0)
 
     # No prompt
@@ -207,21 +251,39 @@ def main():
         parser.print_help()
         sys.exit(0)
 
-    # Get provider
-    provider = configurator.get_default_provider_class()
-    if provider is None:
-        print("No LLM provider configured. Run 'how --setup' to configure one.")
+    # Check that at least one provider is configured
+    if not configurator.any_providers_configured():
+        print("No LLM providers configured. Run 'how --setup' to configure one.")
         sys.exit(0)
+
+    # Get provider
+    provider: type[LLMProvider] | None = None
+    user_specified_provider = args.provider
+    if user_specified_provider is not None:
+        if not configurator.provider_is_supported(user_specified_provider):
+            print("Provider not supported.")
+            sys.exit(1)
+        if not configurator.provider_is_configured(user_specified_provider):
+            print("Provider not configured.")
+            sys.exit(1)
+        provider = configurator.get_provider_by_name(user_specified_provider)
+    else:
+        provider = configurator.get_default_provider_class()
+    assert provider is not None
+    logger.debug(f"Using provider class: {provider.__name__}")
 
     # Authenticate with the LLM provider
     provider.authenticate()
 
-    # Get model from config
-    model = configurator.get_default_provider_model()
-
-    # Get environment information
-    operating_system = platform.system()
-    shell = os.environ.get("SHELL", "unknown")
+    # Get model
+    model: str | None = None
+    user_specified_model = args.model
+    if user_specified_model is not None:
+        model = user_specified_model
+    else:
+        model = configurator.get_default_provider_model()
+    assert model is not None
+    logger.debug(f"Using model: {model}")
 
     # Construct full prompt
     prompt_with_context = PROMPT_TEMPLATE.format(
@@ -230,17 +292,15 @@ def main():
         prompt=args.prompt,
     )
 
+    # Get commands from the AI
     console = Console()
-
     try:
         with console.status("[bold green]Working...[/bold green]", spinner="dots"):
             response = provider.generate_commands(prompt_with_context, model)
     except Exception:  # noqa: BLE001
-        console.print(
-            "[red]An error occurred. Ensure your selected model supports structued output.[/red]"
-        )
+        console.print("[red]An error occurred while generating commands.[/red]")
         sys.exit(1)
 
+    # Print commands to the console
     commands = [c.command for c in response.commands]
-
     print_commands(commands)

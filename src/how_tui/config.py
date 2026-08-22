@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from platformdirs import PlatformDirs
@@ -5,6 +6,8 @@ from pydantic import ValidationError
 
 from how_tui.models.config_file import ConfigFile, ProviderConfig
 from how_tui.providers.base import LLMProvider
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigManager:
@@ -22,11 +25,15 @@ class ConfigManager:
     def initialize(self):
         """Create or load configuration file."""
 
+        # TODO: Consider putting all this in the __init__ function so that
+        # we dont need asserts all over the place.
+
         config_dir = self.platform_dirs.user_config_path
         config_dir.mkdir(parents=True, exist_ok=True)
         config_file = config_dir / self.config_filename
 
         if not config_file.exists():
+            logger.debug("Config file does not exist. Creating one now...")
             self._create_config_file(config_file)
             return
 
@@ -144,22 +151,58 @@ class ConfigManager:
 
         config_file.write_text(self.config.model_dump_json(indent=2))
 
-    def get_default_provider_class(self) -> type[LLMProvider] | None:
+    def any_providers_configured(self) -> bool:
+        """Returns True if at least one provider is configured. False otherwise."""
 
         assert self.config is not None
+        assert self.config.providers is not None
 
-        if self.config.default_provider is None:
-            return None
+        return (
+            self.config.default_provider is not None and len(self.config.providers) > 0
+        )
+
+    def get_default_provider_class(self) -> type[LLMProvider] | None:
+        """Get the default provider class.
+
+        Assumptions:
+            - A default provider is configured. Exits otherwise.
+        """
+
+        assert self.config is not None
+        assert self.config.default_provider is not None
 
         default_provider_class = self.provider_index[self.config.default_provider]
         if default_provider_class is None:
-            print(
-                f"Invalid default provider: {self.config.default_provider}",
-                file=sys.stderr,
+            logger.debug(
+                "Config.get_default_provider_class called when no default provider is configured.",
             )
             sys.exit(1)
 
         return default_provider_class
+
+    def get_provider_by_name(self, provider_name: str) -> type[LLMProvider]:
+        """Get provider class by name.
+
+        Assumptions:
+            - The provider is supported and the provider is configured. Exits otherwise.
+        """
+
+        assert self.config is not None
+        assert self.config.providers is not None
+        assert provider_name in self.config.providers
+        assert provider_name in self.provider_index
+        return self.provider_index[provider_name]
+
+    def provider_is_supported(self, provider_name: str) -> bool:
+
+        return provider_name in self.provider_index
+
+    def provider_is_configured(self, provider_name: str) -> bool:
+
+        assert self.config is not None
+        assert self.config.providers is not None
+
+        return provider_name in self.config.providers
 
     def get_default_provider_model(self) -> str:
 
@@ -195,6 +238,7 @@ class ConfigManager:
 
         try:
             self.config = ConfigFile.model_validate_json(config_file.read_text())
-        except ValidationError:
-            print("Invalid configuration file.", file=sys.stderr)
+        except ValidationError as e:
+            logger.debug(f"Validation error occurred while reading config file: {e}")
+            print("Malformed configuration file.", file=sys.stderr)
             sys.exit(1)
