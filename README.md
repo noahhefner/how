@@ -29,7 +29,7 @@ uv tool install how-tui
 ```sh
 $ how
 usage: how [-h] [--list-supported-providers] [--list-configured-providers] [--add-provider]
-           [--remove-provider] [--set-default-provider]
+           [--remove-provider] [--set-default-provider] [--debug] [--provider PROVIDER] [--model MODEL]
            [prompt]
 
 positional arguments:
@@ -44,7 +44,10 @@ options:
   --add-provider        Setup an LLM provider
   --remove-provider     Remove an LLM provider
   --set-default-provider
-                        Remove an LLM provider
+                        Set a default LLM provider
+  --debug               Enable debug level logging
+  --provider PROVIDER   Specify which LLM provider to use
+  --model MODEL         Specify which model to use
 ```
 
 ### First-Time Setup
